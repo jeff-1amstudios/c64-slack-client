@@ -21,7 +21,7 @@ function handle(chunk) {
     return;
 
   var cmd = _inputBuffer.substr(0, _inputBuffer.length - 1);
-  console.error('recv', cmd);
+  console.error('got chunk:', cmd);
   _inputBuffer = '';
 
   // heartbeat from c64

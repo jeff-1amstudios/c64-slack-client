@@ -2,50 +2,108 @@
 'use strict';
 var Promise = require('bluebird');
 var _ = require('lodash');
+var fs = require('fs');
+
 var commandHandler = require('./c64CommandListener.js');
 var SerialPort = require("serialport");
 
 var WebClient = require('@slack/client').WebClient;
+var RtmClient = require('@slack/client').RtmClient;
+var MemoryDataStore = require('@slack/client').MemoryDataStore;
+
+var CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS;
+var RTM_EVENTS = require('@slack/client').RTM_EVENTS;
+
 var token = process.env.SLACK_API_TOKEN || '';
+var selectedChannel = '';
+
 var web = new WebClient(token);
+var rtm = new RtmClient(token, {
+  dataStore: new MemoryDataStore(),
+  logLevel: 'error',
+  logger: function(level, str) {
+    if (level === 'error') {
+      console.error('Slack:', level, str);
+    }
+  }
+});
+rtm.start();
+
+rtm.on(RTM_EVENTS.MESSAGE, function (message) {
+  console.error(message);
+  if (message.channel === selectedChannel) {
+    writeMessage(message);
+  }
+});
+
+function writeMessage(message) {
+  var user = rtm.dataStore.getUserById(message.user);
+  var msg = toPetscii('-- ' + user.profile.real_name + ' --\n' + message.text + '\n\n');
+  write(MSG_REQUEST + msg + '~');
+}
+
+
+ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, function (rtmStartData) {
+  var r= rtm;
+  debugger;
+//   //groups = _.filter(rtmStartData.groups, { is_archived: false});
+//   //console.error(rtmStartData);
+//   //console.log(`Logged in as ${rtmStartData.self.name} of team ${rtmStartData.team.name}, but not yet connected to a channel`);
+ });
+
 
 var mode = 0; // 0 = stdin/out, 1 = serial
 
 console.error('loaded');
 
-const CHANNEL_RESPONSE = '0';
+const CHANNEL_LIST_REQUEST = '0';
+const CHANNEL_LIST_RESPONSE = '0';
+const CHANNEL_SELECT_REQUEST = '1';
+const MSG_REQUEST = '1';
 
 
 commandHandler.eventEmitter.on('gotCommandFromC64', (data) => {
-  if (data === 'channels.list') {
-    return Promise.resolve() // getChannels()
-      .then((c) => write(CHANNEL_RESPONSE + '\x06' + ':g20upec1l:3-8-1-release:g19jr8hps:alerts-quota:g06fxewts:amc-product-and-leads:g20upec1l:3-8-1-release:g19jr8hps:alerts-quota:g06fxewts:amc-product-and-leads'));
+  if (data === CHANNEL_LIST_REQUEST) {
+    return getChannels()
+      .then((c) => {
+        fs.writeFile('/tmp/channels', c);
+        return c;
+      })
+      .then((c) => write(c));
+  }
+  else if (data[0] === CHANNEL_SELECT_REQUEST) {
+    selectedChannel = data.substring(1);
+    var channel = rtm.dataStore.getGroupById(selectedChannel);
+    console.error(selectedChannel, channel);
+    if (channel && channel.latest) {
+      writeMessage(channel.latest);
+    }
+    console.error('channel select', selectedChannel);
   }
   else {
-    write('got data');
+    console.error('unknown command:', data);
   }
 });
 
 
-function write(str) {
-  var str = str[0] + convertToPetscii(str.substring(1));
-  str += '~';  // add end marker
-  process.stderr.write("writing " + str + "\n");
+function write(buffer) {
+  //console.error('writing:', buffer, 'str:', buffer.toString());
+  console.error('writing:', buffer.toString());
   if (mode === 1) {
-      port.write(str, function(e, bytesWritten) {
+      port.write(buffer, function(e, bytesWritten) {
         if (e) {
           console.error('error', e);
         }
       });
   }
   else {
-    process.stdout.write(str);
+    process.stdout.write(buffer);
   }
 }
 
 
 // from petcat.c
-function convertToPetscii(input) {
+function toPetscii(input) {
   input = input.replace(/\n/g, "@@@");
   var output = '';
   for (var i = 0; i < input.length; i++) {
@@ -70,9 +128,7 @@ if (mode === 0) {
   process.stdout.write('\x00');
 
   process.stdin.on('data', (chunk) => {
-//    console.error(chunk);
     var chars = chunk.toString('utf-8');
-//    console.error(chars);
     commandHandler.handle(chars);
   });
 
@@ -100,18 +156,48 @@ else {
   });
 }
 
-// id:name[0-40]
+/*
+*  struct {
+*    byte type, 
+*    byte entryCount
+*    short[] entryOffsets
+*    ... entryData (id,name)...
+*/
 function getChannels() {
   return web.groups.list({ exclude_archived: true })
     .then((res) => {
+      if (res.groups.length > 10) {
+        res.groups.length = 10;
+      }
+      var entryOffsetsTableLength = res.groups.length * 2;
+
+      var buffer = Buffer.alloc(1000);
+      var offset = 0;
+      buffer.write(CHANNEL_LIST_RESPONSE, offset++);
+      buffer.writeUInt8(res.groups.length, offset++);
+
       var output = '';
+      var entryLengths = [];
       _.each(res.groups, (g) => {
         if (g.is_mpim) {
           return;
-        }
-        output += g.id + ':' + g.name.substring(0, 40) + ':';
+        }        
+        
+        var entry = g.id + g.name.substring(0, 40);
+        //console.error('entry:', entry);
+        buffer.writeUInt8(entry.length, offset++);
+        buffer.write(entry, offset);
+        offset += entry.length;
       });
-      return output;
+
+      buffer.write('~', offset++);
+
+      if (offset > 250) {
+        console.error("output too long!");
+      }
+      var finalBuffer = Buffer.alloc(offset);
+      buffer.copy(finalBuffer, 0, 0, offset);
+      return finalBuffer;
     });
 }
 

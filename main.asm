@@ -25,6 +25,7 @@ CODE_START = $8000
 
 screen_update_handler_ptr !word 0
 keyboard_handler_ptr !word 0
+.dbg_pos !byte 0
 
 init
 	; disable BASIC rom
@@ -43,7 +44,11 @@ init
 	jsr keyboard_read
 	jsr rs232_try_read_byte
 	cmp #0
-	beq .main_loop  
+	beq .main_loop
+
+;	inc .dbg_pos
+;	ldx .dbg_pos
+	sta $0400 + (40 * 23) + 38
 
 	ldy #0          ; reset our 'end of command' marker
 	cmp #126        ; tilde char means 'end of command'
@@ -72,6 +77,14 @@ init
 cmd_buffer !fill 250, 0
 cmd_buffer_ptr !byte 0
 .end_of_command !byte 0
+.debug_output_offset !byte 0
+
+.print_output
+	clc
+	ldx #24
+	ldy #38
+	jsr PLOT
+	jsr CHROUT
 
 
 !source "defs.asm"
@@ -79,6 +92,7 @@ cmd_buffer_ptr !byte 0
 !source "rs232.asm"
 !source "main_screen.asm"
 !source "channels_screen.asm"
+!source "message_screen.asm"
 !source "string.asm"
 !source "cmd_handler.asm"
 !source "keyboard_input.asm"

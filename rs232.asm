@@ -3,6 +3,7 @@
 .file_name !byte 6, 0
 .output_buffer !fill 256, 0
 .input_buffer !fill 256, 0
+.tmp !byte 0
 
 ; ----------------------------------------------------------------------
 ; Opens rs232 channel on file #3
@@ -19,7 +20,7 @@ rs232_open
 		lda #0		; no name
 		jsr SETNAM
 
-		lda #%00000110  ; 300 baud, 8 bits per char
+		lda #%00001000  ; 1200 baud, 8 bits per char
 		sta $0293
 
 		jsr OPEN
@@ -66,5 +67,27 @@ rs232_send_string
 		jmp .send_string_loop
 		
 .send_string_done
+		jsr CLRCHN
+		rts
+
+; ----------------------------------------------------------------------
+; $FB/$FC: source bytes
+; A: number of bytes to send
+; ----------------------------------------------------------------------
+rs232_send_buffer
+		sta .tmp
+		ldx #3
+		jsr CHKOUT       ; select file 3 as input channel
+		ldx .tmp      	 ; X now holds the number of chars to send
+		ldy #0
+.send_buffer_loop
+		lda ($fb), y
+		jsr CHROUT
+		iny
+		dex
+		beq .send_buffer_done
+		jmp .send_buffer_loop
+		
+.send_buffer_done
 		jsr CLRCHN
 		rts
