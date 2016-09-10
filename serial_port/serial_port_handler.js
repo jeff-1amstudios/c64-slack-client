@@ -23,76 +23,142 @@ var rtm = new RtmClient(token, {
   logLevel: 'error',
   logger: function(level, str) {
     if (level === 'error') {
-      console.error('Slack:', level, str);
+      consoleLog('Slack: ' + level + ',' + str);
     }
   }
 });
 rtm.start();
 
 rtm.on(RTM_EVENTS.MESSAGE, function (message) {
-  console.error(message);
   if (message.channel === selectedChannel) {
     writeMessage(message);
   }
 });
 
+var lastUserId = '';
+
 function writeMessage(message) {
-  var user = rtm.dataStore.getUserById(message.user);
-  var msg = toPetscii('-- ' + user.profile.real_name + ' --\n' + message.text + '\n\n');
-  write(MSG_REQUEST + msg + '~');
+  if (message.hidden === true) {
+    return;
+  }
+
+  var msg = '';
+  if (lastUserId !== message.user) {
+    var user = rtm.dataStore.getUserById(message.user);
+    var msgDate = new Date(parseFloat(message.ts) * 1000);
+    var dateString = msgDate.getHours() + ':' + msgDate.getMinutes();
+    msg += '--';
+    msg += ' ' + user.profile.real_name + ' ';
+    msg += dateString;
+    msg += ' --\n';
+    lastUserId = message.user;
+  }
+  msg += message.text.substring(0, 140);
+  var linesCount = countMessageLines(msg);
+  var msgout = msg; //formatMessageLines(msg);
+  consoleLog('[' + msgout + ']\nlineCount ' + linesCount );
+
+  msg = toPetscii(msgout);
+  var buffer = Buffer.alloc(msg.length + 3);
+  var offset = 0;
+  buffer.writeUInt8(MSG_REQUEST, offset++);
+  buffer.writeUInt8(linesCount, offset++);
+  buffer.write(msg, offset);
+  offset += msg.length;
+  buffer.write('~', offset);
+
+  write(buffer);
+}
+
+function formatMessageLines(msg) {
+  var lineRun = 0;
+  var output = '';
+  for (var i = 0; i < msg.length; i++) {
+    if (msg[i] === '\n') {
+      lineRun = 0;
+    }
+    else if (lineRun === 39) {
+      output += '\n';
+      lineRun = 0;
+    }
+    output += msg[i];
+    lineRun++;
+  }
+  return output;
+}
+
+function countMessageLines(msg) {
+  var count = 1;
+  var lineRun = 0;
+  for (var i = 0; i < msg.length; i++) {
+    if (msg[i] === '\n' || lineRun === 40) {
+      count++;
+      lineRun = 0;
+    }
+    lineRun++;
+  }
+  return count;
 }
 
 
- rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, function (rtmStartData) {
-  var r= rtm;
-  debugger;
-//   //groups = _.filter(rtmStartData.groups, { is_archived: false});
-//   //console.error(rtmStartData);
-//   //console.log(`Logged in as ${rtmStartData.self.name} of team ${rtmStartData.team.name}, but not yet connected to a channel`);
+ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
+  consoleLog('connected');
+
+  write('2' + toPetscii(rtmStartData.self.name) + '~');
  });
 
 
 var mode = 0; // 0 = stdin/out, 1 = serial
 
-console.error('loaded');
-
-const CHANNEL_LIST_REQUEST = '0';
-const CHANNEL_LIST_RESPONSE = '0';
-const CHANNEL_SELECT_REQUEST = '1';
-const MSG_REQUEST = '1';
+const CHANNEL_LIST_REQUEST = 0x30;
+const CHANNEL_LIST_RESPONSE = 0x30;
+const CHANNEL_SELECT_REQUEST = 0x31;
+const MSG_REQUEST = 0x31;
+const HELLO_REQUEST = 0x32;
 
 
 commandHandler.eventEmitter.on('gotCommandFromC64', (data) => {
-  if (data === CHANNEL_LIST_REQUEST) {
-    return getChannels()
-      .then((c) => {
-        fs.writeFile('/tmp/channels', c);
-        return c;
-      })
-      .then((c) => write(c));
+  if (data[0] === CHANNEL_LIST_REQUEST) {
+    var page = data[1];
+    var output = getChannels(page);
+    fs.writeFile('/tmp/channels', output);
+    write(output);
   }
   else if (data[0] === CHANNEL_SELECT_REQUEST) {
-    selectedChannel = data.substring(1);
-    var channel = rtm.dataStore.getGroupById(selectedChannel);
-    console.error(selectedChannel, channel);
-    if (channel && channel.latest) {
-      writeMessage(channel.latest);
+    //consoleLog('req', data);
+    selectedChannel = data.slice(1).toString('utf-8');
+    consoleLog('channel select', selectedChannel);
+
+    var historyFn;
+    if (selectedChannel[0] === 'C') {
+      historyFn = web.channels;  
     }
-    console.error('channel select', selectedChannel);
+    else {
+      historyFn = web.groups;  
+    }
+
+    historyFn.history(selectedChannel, {
+      count: 5
+    })
+      .then((res) => {
+        _.forEachRight(res.messages, (m) => {
+          writeMessage(m);
+        });
+      });
   }
   else {
-    console.error('unknown command:', data);
+    consoleLog('unknown command:', data);
   }
 });
 
 
 function write(buffer) {
-  //console.error('writing:', buffer, 'str:', buffer.toString());
-  console.error('writing:', buffer.toString());
+  consoleLog('writing len=', buffer.length, buffer);
+//  consoleLog('writing:' + buffer.toString());
   if (mode === 1) {
       port.write(buffer, function(e, bytesWritten) {
         if (e) {
-          console.error('error', e);
+          consoleLog('error ' + e);
         }
       });
   }
@@ -105,6 +171,9 @@ function write(buffer) {
 // from petcat.c
 function toPetscii(input) {
   input = input.replace(/\n/g, "@@@");
+  input = input.replace(/_/g, '-');
+  input = input.replace(/`/g, '\"');
+  input = input.replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '');
   var output = '';
   for (var i = 0; i < input.length; i++) {
     var ascii = input.charCodeAt(i);
@@ -127,9 +196,10 @@ if (mode === 0) {
   // seems to be needed to 'wake up' the connection
   process.stdout.write('\x00');
 
-  process.stdin.on('data', (chunk) => {
-    var chars = chunk.toString('utf-8');
-    commandHandler.handle(chars);
+  process.stdin.on('data', (data) => {
+    if (data && data.length > 0) {
+      commandHandler.handle(data);
+    }
   });
 
   process.stdin.on('end', function () {
@@ -147,64 +217,104 @@ else {
     baudrate: 1200
   });
   port.on('open', function () {
-    console.error('port opened');
+    consoleLog('port opened');
   });
   port.on('data', function(data) {
     if (data && data.length > 0) {
-      commandHandler.handle(data.toString());
+      commandHandler.handle(data);
     }
   });
 }
 
 /*
 *  struct {
-*    byte type, 
-*    byte entryCount
-*    short[] entryOffsets
-*    ... entryData (id,name)...
+*    byte msgid,
+*    byte totalPages,
+*    byte pageSize,
+*    channelData[] { byte len, char[] id, char[] name }
 */
-function getChannels() {
-  return web.groups.list({ exclude_archived: true })
-    .then((res) => {
-      if (res.groups.length > 10) {
-        res.groups.length = 10;
-      }
-      var entryOffsetsTableLength = res.groups.length * 2;
+function getChannels(page) {
+  const PAGE_SIZE = 15;
+  var buffer = Buffer.alloc(1000);
+  var offset = 0;
+  //var channelsAndGroups = {};
+  var visibleChannels = _.filter(rtm.dataStore.channels, {is_member: true});
+  var visibleGroups = _.filter(rtm.dataStore.groups, (g) => !g.is_archived && !g.is_mpim);
 
-      var buffer = Buffer.alloc(1000);
-      var offset = 0;
-      buffer.write(CHANNEL_LIST_RESPONSE, offset++);
-      buffer.writeUInt8(res.groups.length, offset++);
+  // var visibleGroups = [{
+  //   name: 'test1',
+  //   id: 'G24Q7DAD8'
+  // },
+  // {
+  //   name: 'test2',
+  //   id: 'G24Q7DAD8'
+  // },
+  // {
+  //   name: 'test3',
+  //   id: 'G24Q7DAD8'
+  // },
+  // {
+  //   name: 'test4',
+  //   id: 'G24Q7DAD8'
+  // },
+  // {
+  //   name: 'test5',
+  //   id: 'G24Q7DAD8'
+  // },
+  // {
+  //   name: 'test6',
+  //   id: 'G24Q7DAD8'
+  // }];
+  // var visibleChannels = [];
+  var channelsAndGroups = _.concat(visibleChannels, visibleGroups);
+  var groups = _.sortBy(channelsAndGroups, 'name');
+  var page = _.slice(groups, page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-      var output = '';
-      var entryLengths = [];
-      _.each(res.groups, (g) => {
-        if (g.is_mpim) {
-          return;
-        }        
-        
-        var entry = g.id + g.name.substring(0, 40);
-        //console.error('entry:', entry);
-        buffer.writeUInt8(entry.length, offset++);
-        buffer.write(entry, offset);
-        offset += entry.length;
-      });
+  buffer.writeUInt8(CHANNEL_LIST_RESPONSE, offset++);
+  buffer.writeUInt8(groups.length / PAGE_SIZE, offset++);
+  buffer.writeUInt8(page.length, offset++);
 
-      buffer.write('~', offset++);
+  var output = '';
+  var count = 0;
+  debugger;
+  _.each(page, (g) => {
+    var entry = g.id;
+    if (g.is_channel) entry += '#';
+    entry += toPetscii(g.name.substring(0, 30));
+    if (g.unread_count_display > 0) {
+      entry += ' (' + g.unread_count_display + ')';
+    }
 
-      if (offset > 250) {
-        console.error("output too long!");
-      }
-      var finalBuffer = Buffer.alloc(offset);
-      buffer.copy(finalBuffer, 0, 0, offset);
-      return finalBuffer;
-    });
+    buffer.writeUInt8(entry.length, offset++);
+    buffer.write(entry, offset, entry.length, 'ascii');
+    offset += entry.length;
+    count++;
+  });
+
+  buffer.write('~', offset++);
+
+  if (offset > 1200) {
+    consoleLog('[ERROR] ** channels output too long! **');
+  }
+  var finalBuffer = Buffer.alloc(offset);
+  buffer.copy(finalBuffer, 0, 0, offset);
+  return finalBuffer;
 }
 
-//getChannels()
+getChannels(0)
 //  .then((c) => console.error(c));
 
 
 // web.groups.history('G02H6KDMJ', { count: 20, unreads: 1}, (err, res) => {
 //   console.log(res);
 // });
+
+function consoleLog() {
+  // write debug messages to stderr as stdout is read by c64 emulator
+  console.error(arguments);
+}
+
+// countMessageLines('-- Dan Diephouse 8:32 --\n
+// CloudHub Worker Cloud Degradation in US-East ?')
+
+//write('2Jeff Harris~');

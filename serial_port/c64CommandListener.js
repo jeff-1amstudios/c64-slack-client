@@ -4,7 +4,7 @@
 
 var events = require('events');
 
-var _inputBuffer = '';
+var _inputBuffer = Buffer.alloc(0);
 var lastFetched = 0;
 var fetchingMessage = false;
 var eventEmitter = new events.EventEmitter();
@@ -16,13 +16,16 @@ module.exports = {
 
 
 function handle(chunk) {
-  _inputBuffer += chunk;
-  if (!_inputBuffer.endsWith('~'))
+  _inputBuffer = Buffer.concat([_inputBuffer, chunk]);
+  //console.error('chunk_str', _inputBuffer);
+  if (_inputBuffer[_inputBuffer.length-1] !== 0x7e) {
     return;
+  }
 
-  var cmd = _inputBuffer.substr(0, _inputBuffer.length - 1);
-  console.error('got chunk:', cmd);
-  _inputBuffer = '';
+  var cmd = Buffer.alloc(_inputBuffer.length - 1); // _inputBuffer.substr(0, _inputBuffer.length - 1);
+  _inputBuffer.copy(cmd, 0, 0, _inputBuffer.length - 1);
+  //console.error('got chunk:', cmd);
+  _inputBuffer = Buffer.alloc(0);
 
   // heartbeat from c64
   if (cmd === 'hb') {

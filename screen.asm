@@ -2,8 +2,8 @@
 
 screen_clear
 	lda #0
-	sta $d020       ; border color
-	sta $d021       ; background color
+	;sta $d020       ; border color
+	;sta $d021       ; background color
 	lda #147        ; clear screen
 	jsr CHROUT
 
@@ -30,6 +30,7 @@ screen_print_str
 	cmp #0
 	beq .print_str_exit
 	jsr CHROUT
+screen_print_str_debugger
 	iny
 	bne .print_str_loop
 	; if we overflowed Y, inc $fc
@@ -72,4 +73,39 @@ screen_clear_background
 	sta $dae8,x
 	inx           
 	bne .screen_clear_background_loop
+	rts
+
+; ----------------------------------------------------------------------
+; A: first row to scroll
+; Y: number of rows to scroll
+; ----------------------------------------------------------------------
+screen_scroll_lines_tmp !word 0
+screen_scroll_nbr_lines !byte 0
+
+screen_scroll_lines_up
+	sty screen_scroll_nbr_lines
+	ldx #40
+	jsr multiply   ; A * X
+	stx screen_scroll_lines_tmp
+	sta screen_scroll_lines_tmp + 1
+	+add16im screen_scroll_lines_tmp, $0400, ZP_TMP_1
+	+add16im screen_scroll_lines_tmp, $0428, ZP_TMP_2
+;debugger
+
+	; ZP_TMP_1 = pointer to dest, ZP_TMP_2, pointer to src
+
+.screen_scroll_lines_up_loop
+	ldy #39
+.screen_scroll_single_line_up_loop
+	lda (ZP_TMP_2), y
+	sta (ZP_TMP_1), y
+	dey
+	bpl .screen_scroll_single_line_up_loop
+	dec screen_scroll_nbr_lines
+	beq .screen_scroll_lines_up_exit
+	+add16im ZP_TMP_1, 40, ZP_TMP_1
+	+add16im ZP_TMP_2, 40, ZP_TMP_2
+	jmp .screen_scroll_lines_up_loop
+
+.screen_scroll_lines_up_exit
 	rts

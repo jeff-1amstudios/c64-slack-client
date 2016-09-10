@@ -13,7 +13,6 @@ keyboard_read
 .check_input
 		cmp #'C'
 		bne .run_custom_handler
-		inc $d020
 		jsr channels_screen_enter
 		rts
 

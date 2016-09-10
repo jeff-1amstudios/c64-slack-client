@@ -37,8 +37,10 @@ init
 	jsr screen_enable_lowercase_chars
 
 	jsr rs232_open
-	jsr main_screen_render
+	jsr wait_for_connection_screen_render
 	jsr irq_init
+
+	+set16im cmd_buffer, COMMAND_BUFFER_PTR
 
 .main_loop
 	jsr keyboard_read
@@ -46,36 +48,33 @@ init
 	cmp #0
 	beq .main_loop
 
-;	inc .dbg_pos
-;	ldx .dbg_pos
 	sta $0400 + (40 * 23) + 38
 
-	ldy #0          ; reset our 'end of command' marker
 	cmp #126        ; tilde char means 'end of command'
 	bne .add_byte_to_buffer
 	ldy #1          ; if tilde, then set Y = 1
 	sty .end_of_command
 	lda #0          ; replace ~ with \0 so we write the end of the string
+add_byte
 .add_byte_to_buffer
-	;inc $d020
-	ldx cmd_buffer_ptr
-	sta cmd_buffer, x
-	inc cmd_buffer_ptr
 
-	;jsr heartbeat_reset
+	ldy #0
+	sta (COMMAND_BUFFER_PTR), y
+	+inc16 COMMAND_BUFFER_PTR
 
 	ldy .end_of_command
 	cpy #1          ; if not 'end of command', go back around
 	bne .main_loop
-
+	lda #$20
+	sta $0400 + (40 * 23) + 38
 	jsr command_handler
-	ldx #0                  ; set length of buffer back to zero
-	stx cmd_buffer_ptr
+	+set16im cmd_buffer, COMMAND_BUFFER_PTR
+	ldx #0
 	stx .end_of_command
+;debugger
 	jmp .main_loop
 
-cmd_buffer !fill 250, 0
-cmd_buffer_ptr !byte 0
+cmd_buffer !fill 1200, 0
 .end_of_command !byte 0
 .debug_output_offset !byte 0
 
@@ -90,6 +89,7 @@ cmd_buffer_ptr !byte 0
 !source "defs.asm"
 !source "screen.asm"
 !source "rs232.asm"
+!source "wait_for_connection_screen.asm"
 !source "main_screen.asm"
 !source "channels_screen.asm"
 !source "message_screen.asm"
@@ -98,6 +98,9 @@ cmd_buffer_ptr !byte 0
 !source "keyboard_input.asm"
 !source "irq.asm"
 !source "heartbeat.asm"
+!source "memory.asm"
+!source "shared_resources.asm"
+!source "math.asm"
 
 !if * > $9fff {
 	!error "Program reached ROM: ", * - $d000, " bytes overlap."

@@ -18,7 +18,7 @@ SYSTEM_IRQ_VECTOR = $314
 }
 
 !macro inc16 .n1 {
-    inc .n1+0                                                    ; Increment the LSB
+    inc .n1                                                      ; Increment the LSB
     bne .done                                                    ; If the result was not zero we're done
     inc .n1+1                                                    ; Increment the MSB if LSB wrapped round
 .done   
@@ -51,7 +51,7 @@ SYSTEM_IRQ_VECTOR = $314
     clc             
     lda .n1       
     adc .n2
-    sta .result+0       
+    sta .result+0
     lda .n1+1       
     adc .n2+1       
     sta .result+1

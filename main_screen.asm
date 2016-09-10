@@ -1,31 +1,43 @@
 !zone main_screen
 
-.str_header              !pet "Slack for Commodore64", 0
-.str_header_line         !fill 40, $A3
-!byte 0
+.connected_text 
+	!pet "SLACK API ONLINE VIA RASPERRY PI BRIDGE", 0
+.username_text !pet "Slack username:", 0
 
-visitors_buffer         !pet "waiting for data..."
-!fill 235, 0
+.controls_text
+	!pet "C - channels list", 13, 0
+
+slack_group_count !byte 0
+slack_username !fill 20, 0
 
 main_screen_render
 	jsr screen_clear
-	lda #COLOR_WHITE
-	jsr CHROUT      ; foreground white
 
-	; header row
-	ldx #0         ; row
-	ldy #4          ; column
-	+set16im .str_header, $fb
+	ldx #TOP_BANNER_ROW
+	ldy #TOP_BANNER_COL
+	+set16im top_banner_text, $fb
 	jsr screen_print_str
 
-	; header row line
-	ldx #1
+	ldx #4
 	ldy #0
-	+set16im .str_header_line, $fb
+	+set16im .connected_text, $fb
+	jsr screen_print_str	
+
+	ldx #8
+	ldy #0
+	+set16im .username_text, $fb
+	jsr screen_print_str	
+
+	ldx #8
+	ldy #15
+	+set16im slack_username, $fb
 	jsr screen_print_str
 
-	lda #COLOR_GREEN
-	jsr CHROUT
+	ldx #10
+	ldy #0
+	+set16im .controls_text, $fb
+	jsr screen_print_str
+
 
 	; call .update_handler on screen refresh
 	sei

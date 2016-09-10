@@ -2,6 +2,7 @@
 
 CMD_CHANNELS = "0"
 CMD_MSG = "1"
+CMD_HELLO = "2"
 
 heartbeat_tick !byte 0
 
@@ -12,20 +13,28 @@ command_handler
 		lda cmd_buffer
 		cmp #CMD_CHANNELS
 		bne .check_msg
-		+set16im cmd_buffer + 1, $fb
+		+set16im cmd_buffer, $fb
 		+set16im channels_buffer, $fd
-		jsr string_copy
+		jsr mem_copy
 		jsr channels_screen_on_data
 		rts
 
 .check_msg
 		cmp #CMD_MSG
-		bne .done
+		bne .check_hello
 		+set16im cmd_buffer + 1, $fb
 		+set16im msg_buffer, $fd
 		jsr string_copy
 		jsr message_screen_on_data
 		rts
+
+.check_hello
+		cmp #CMD_HELLO
+		bne .done
+		+set16im cmd_buffer + 1, $fb
+		+set16im slack_username, $fd
+		jsr string_copy
+		jsr main_screen_render
 
 .done
 		rts
