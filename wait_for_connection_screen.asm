@@ -24,9 +24,12 @@ wait_for_connection_screen_render
 	ldy #0
 	+set16im .wait_text, $fb
 	jsr screen_print_str
+
+	jsr logo_sprite_init
 	rts
 
 .update_handler
+	jsr logo_sprite_update
 	dec .text_flash
 	bne .skip_color_change
 

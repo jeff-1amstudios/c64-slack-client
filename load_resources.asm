@@ -1,42 +1,22 @@
 !zone load_resources
-.address_sprites = $2000  ; 8192
+.address_data = $2000  ; 8192
 
-* = .address_sprites                  
+* = .address_data
 
-!bin "resources/mule.spr"  ; (512)
+!bin "resources/slack-logo.spr"
 
-;!warn "Program reached ROM2x: ", *
-
-; 8704
-!bin "resources/roller.spr" ;(512)
-
-; 9216
-!bin "resources/waving_hand.spr" ; (704)
-
-; 9920
-!bin "resources/jackson.spr" ; (4416)
-
-; 14336
-!bin "resources/smiler.spr", 1024 ; (1024)
-
-; 15360
-!bin "resources/twitter.spr" ; (512)
-
-; 15872
-!bin "resources/weather.spr" ; (512)
-
-
-logo_data
-!bin "resources/logo.bin"
-
-
-; sprite0 - mule, jackson
-; sprite1 - twitter
-; sprite2 - roller
-; sprite3 - left hand
-; sprite4 - right hand
-; sprite5 - weather
-; sprite6 - smiler
+; sprite0 - logo
+; sprite1 - 
+; sprite2 - 
+; sprite3 - 
+; sprite4 - 
+; sprite5 - 
+; sprite6 - 
 ; sprite7 - 
 
-
+LINES_BUFFER_SIZE = 255
+message_lines_render_start_index !byte 0
+message_lines_next_insert_index !byte 0
+message_lines_pointers_lo !fill LINES_BUFFER_SIZE
+message_lines_pointers_hi !fill LINES_BUFFER_SIZE
+message_lines_buffer !fill 42 * LINES_BUFFER_SIZE, 0

@@ -3,6 +3,7 @@
 var Promise = require('bluebird');
 var _ = require('lodash');
 var fs = require('fs');
+var util = require('util');
 
 var commandHandler = require('./c64CommandListener.js');
 var SerialPort = require("serialport");
@@ -46,65 +47,49 @@ function writeMessage(message) {
   if (lastUserId !== message.user) {
     var user = rtm.dataStore.getUserById(message.user);
     var msgDate = new Date(parseFloat(message.ts) * 1000);
-    var dateString = msgDate.getHours() + ':' + msgDate.getMinutes();
-    msg += '--';
-    msg += ' ' + user.profile.real_name + ' ';
-    msg += dateString;
-    msg += ' --\n';
+    var headerText = util.format('%s %d:%d ', user.profile.real_name.substring(0, 32), msgDate.getHours(), msgDate.getMinutes());
+    var paddingLength = (40 - headerText.length);
+    headerText = headerText + _.repeat(String.fromCharCode(0xc0), paddingLength);
     lastUserId = message.user;
+    write('1 ');
+    write('3' + toPetscii(headerText));
   }
-  msg += message.text.substring(0, 140);
-  var linesCount = countMessageLines(msg);
-  var msgout = msg; //formatMessageLines(msg);
-  consoleLog('[' + msgout + ']\nlineCount ' + linesCount );
-
-  msg = toPetscii(msgout);
-  var buffer = Buffer.alloc(msg.length + 3);
-  var offset = 0;
-  buffer.writeUInt8(MSG_REQUEST, offset++);
-  buffer.writeUInt8(linesCount, offset++);
-  buffer.write(msg, offset);
-  offset += msg.length;
-  buffer.write('~', offset);
-
-  write(buffer);
+  msg += message.text.substring(0, 255);
+  var lines = getMessageLines(msg);
+  for (let line of lines) {
+    write('1' + toPetscii(line))
+  }
 }
 
-function formatMessageLines(msg) {
+function getMessageLines(msg) {
+  var lines = [];
+  var lineStart = 0;
   var lineRun = 0;
-  var output = '';
   for (var i = 0; i < msg.length; i++) {
     if (msg[i] === '\n') {
+      lines.push(msg.substring(lineStart, i));
+      lineStart = i+1;
       lineRun = 0;
     }
-    else if (lineRun === 39) {
-      output += '\n';
-      lineRun = 0;
-    }
-    output += msg[i];
-    lineRun++;
-  }
-  return output;
-}
-
-function countMessageLines(msg) {
-  var count = 1;
-  var lineRun = 0;
-  for (var i = 0; i < msg.length; i++) {
-    if (msg[i] === '\n' || lineRun === 40) {
-      count++;
-      lineRun = 0;
+    else if (lineRun === 40) {
+      lines.push(msg.substring(lineStart, i));
+      lineStart = i;
+      lineRun = 0; 
     }
     lineRun++;
   }
-  return count;
+  if (lineStart != msg.length -1) {
+    lines.push(msg.substring(lineStart));
+  }
+  
+  return lines;
 }
 
 
  rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
   consoleLog('connected');
 
-  write('2' + toPetscii(rtmStartData.self.name) + '~');
+  write('2' + toPetscii(rtmStartData.self.name));
  });
 
 
@@ -138,7 +123,7 @@ commandHandler.eventEmitter.on('gotCommandFromC64', (data) => {
     }
 
     historyFn.history(selectedChannel, {
-      count: 5
+      count: 20
     })
       .then((res) => {
         _.forEachRight(res.messages, (m) => {
@@ -156,14 +141,12 @@ function write(buffer) {
   consoleLog('writing len=', buffer.length, buffer);
 //  consoleLog('writing:' + buffer.toString());
   if (mode === 1) {
-      port.write(buffer, function(e, bytesWritten) {
-        if (e) {
-          consoleLog('error ' + e);
-        }
-      });
+      port.write(buffer);
+      port.write('~');
   }
   else {
     process.stdout.write(buffer);
+    process.stdout.write('~');
   }
 }
 
@@ -276,7 +259,6 @@ function getChannels(page) {
 
   var output = '';
   var count = 0;
-  debugger;
   _.each(page, (g) => {
     var entry = g.id;
     if (g.is_channel) entry += '#';
@@ -290,8 +272,6 @@ function getChannels(page) {
     offset += entry.length;
     count++;
   });
-
-  buffer.write('~', offset++);
 
   if (offset > 1200) {
     consoleLog('[ERROR] ** channels output too long! **');

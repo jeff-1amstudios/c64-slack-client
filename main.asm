@@ -5,7 +5,7 @@
 
 
 BASIC_START = $0801
-CODE_START = $8000
+CODE_START = $9000
 
 * = BASIC_START
 !byte 12,8,0,0,158
@@ -30,13 +30,14 @@ keyboard_handler_ptr !word 0
 init
 	; disable BASIC rom
 	lda $01
-	and #%01111111
+	and #%11111110
 	sta $01
 
 	jsr screen_clear
 	jsr screen_enable_lowercase_chars
 
 	jsr rs232_open
+	jsr message_screen_init
 	jsr wait_for_connection_screen_render
 	jsr irq_init
 
@@ -101,7 +102,8 @@ cmd_buffer !fill 1200, 0
 !source "memory.asm"
 !source "shared_resources.asm"
 !source "math.asm"
+!source "logo_sprite.asm"
 
-!if * > $9fff {
-	!error "Program reached ROM: ", * - $d000, " bytes overlap."
-}
+;!if * > $9fff {
+;	!error "Program reached ROM: ", * - $d000, " bytes overlap."
+;}

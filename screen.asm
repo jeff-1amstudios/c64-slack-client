@@ -90,21 +90,29 @@ screen_scroll_lines_up
 	sta screen_scroll_lines_tmp + 1
 	+add16im screen_scroll_lines_tmp, $0400, ZP_TMP_1
 	+add16im screen_scroll_lines_tmp, $0428, ZP_TMP_2
+
+	+add16im screen_scroll_lines_tmp, $d800, ZP_TMP_3
+	+add16im screen_scroll_lines_tmp, $d828, ZP_TMP_4
 ;debugger
 
-	; ZP_TMP_1 = pointer to dest, ZP_TMP_2, pointer to src
+	; ZP_TMP_1 = pointer to screen dest, ZP_TMP_2, pointer to screen src
+	; ZP_TMP_3 = pointer to color ram dest, ZP_TMP_4, pointer to color ram src
 
 .screen_scroll_lines_up_loop
 	ldy #39
 .screen_scroll_single_line_up_loop
 	lda (ZP_TMP_2), y
 	sta (ZP_TMP_1), y
+	lda (ZP_TMP_4), y
+	sta (ZP_TMP_3), y
 	dey
 	bpl .screen_scroll_single_line_up_loop
 	dec screen_scroll_nbr_lines
 	beq .screen_scroll_lines_up_exit
 	+add16im ZP_TMP_1, 40, ZP_TMP_1
 	+add16im ZP_TMP_2, 40, ZP_TMP_2
+	+add16im ZP_TMP_3, 40, ZP_TMP_3
+	+add16im ZP_TMP_4, 40, ZP_TMP_4
 	jmp .screen_scroll_lines_up_loop
 
 .screen_scroll_lines_up_exit

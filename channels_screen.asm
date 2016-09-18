@@ -96,7 +96,7 @@ channels_screen_on_data
 
 ; --------------------- keyboard ------------------
 .keyboard_handler
-	cmp #$11 					; down arrow 
+	cmp #KEY_DOWN
 	bne .keyboard_up_arrow
 
 	ldx channel_selection_index	; are we already at the end of our channel list?
@@ -119,8 +119,8 @@ channels_screen_on_data
 	jmp .keyboard_handler_done
 
 .keyboard_up_arrow
-	cmp #$91 					; up arrow
-	bne .keyboard_space
+	cmp #KEY_UP
+	bne .keyboard_return
 
 	ldx channel_selection_index ; are we at 0th position already?
 	dex
@@ -139,8 +139,8 @@ channels_screen_on_data
 	jsr channels_screen_send_request
 	jmp .keyboard_handler_done
 
-.keyboard_space
-	cmp #$20
+.keyboard_return
+	cmp #13
 	bne .keyboard_handler_done
 	+set16im .select_channel_request, $fb
 	jsr rs232_send_string

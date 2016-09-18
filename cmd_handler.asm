@@ -1,8 +1,9 @@
 !zone command_handler
 
 CMD_CHANNELS = "0"
-CMD_MSG = "1"
+CMD_MSG_LINE = "1"
 CMD_HELLO = "2"
+CMD_MSG_HEADER = "3"
 
 heartbeat_tick !byte 0
 
@@ -20,9 +21,18 @@ command_handler
 		rts
 
 .check_msg
-		cmp #CMD_MSG
+		cmp #CMD_MSG_LINE
+		bne .check_msg_header
+		+set16im cmd_buffer, $fb
+		+set16im msg_buffer, $fd
+		jsr string_copy
+		jsr message_screen_on_data
+		rts
+
+.check_msg_header
+		cmp #CMD_MSG_HEADER
 		bne .check_hello
-		+set16im cmd_buffer + 1, $fb
+		+set16im cmd_buffer, $fb
 		+set16im msg_buffer, $fd
 		jsr string_copy
 		jsr message_screen_on_data
