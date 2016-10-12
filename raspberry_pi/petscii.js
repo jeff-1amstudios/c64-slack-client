@@ -3,11 +3,12 @@
 
 function to(input) {
   const sanitizedInput = input
-    .replace(/\n/g, '@@@')
     .replace(/\r/g, '')
+    .replace(/\n/g, '\r')
     .replace(/_/g, '-')
     .replace(/`/g, '"')
-    .replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '');
+    .replace(/\x1A/g, '')  /* ctrl-z */
+    .replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~\r]*/g, '');
 
   let petsciiString = '';
   for (let i = 0; i < sanitizedInput.length; i++) {
@@ -20,25 +21,14 @@ function to(input) {
       petsciiString += sanitizedInput[i];
     }
   }
-  petsciiString = petsciiString.replace(/@@@/g, '\x0d');
   return petsciiString;
 }
 
 function from(input) {
-  let asciiString = '';
-  for (let i = 0; i < input.length; i++) {
-    const ascii = input.charCodeAt(i);
-    if (ascii >= 65 && ascii <= 90) {
-      asciiString += String.fromCharCode(ascii - 32);
-    } else if (ascii >= 97 && ascii <= 122) {
-      asciiString += String.fromCharCode(ascii + 32);
-    } else {
-      asciiString += input[i];
-    }
-  }
-  return asciiString;
+  const convertedInput = input.replace(/\r/g, '\n');
+  return to(convertedInput)
+    .replace(/\r/g, '\n');
 }
-
 
 module.exports = {
   to,

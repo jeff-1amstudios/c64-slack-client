@@ -1,8 +1,15 @@
 {
-   "extends": "airbnb-base",
-   "rules": {
-     "no-console": "off",
-     "comma-dangle": "off",
-     "no-plusplus": "off"
-   }
+  "extends": "airbnb-base",
+  "rules": {
+    "no-console": "off",
+    "comma-dangle": "off",
+    "no-plusplus": "off",
+    "no-control-regex": "off",
+    "prefer-spread": "off",
+    "prefer-rest-params": "off"
+  },
+  "env": {
+    "node": true,
+    "mocha": true
+  }
 }

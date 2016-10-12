@@ -1,8 +1,8 @@
-module.exports = 
+module.exports =
 {
   channels: [
     {
-    name: 'test1',
+      name: 'test1',
       id: 'G24Q7DAD8'
     },
     {
@@ -26,7 +26,7 @@ module.exports =
       id: 'G24Q7DAD8'
     }
   ],
-  dms:[
+  dms: [
     {
       name: 'dm_test1',
       id: 'G24Q7DAD8'
@@ -52,4 +52,4 @@ module.exports =
       id: 'G24Q7DAD8'
     }
   ]
-}
+};

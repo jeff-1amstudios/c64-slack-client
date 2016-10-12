@@ -30,7 +30,7 @@ const rtm = new RtmClient(token, {
 });
 
 const clientContext = {
-  selectedChannel: null,
+  selectedChannelId: null,
   lastUserId: null
 };
 
@@ -79,20 +79,20 @@ c64Channel.on('commandReceived', (command, data) => {
       break;
     }
     case rpcMethods.CHANNEL_SELECT: {
-      clientContext.selectedChannel = data.toString('utf-8');
+      clientContext.selectedChannelId = data.toString('ascii');
       clientContext.lastMessageUserId = null;
-      logger.log('channel-select', clientContext.selectedChannel);
+      logger.log('channel-select', clientContext.selectedChannelId);
 
       let channelType;
-      if (clientContext.selectedChannel[0] === 'C') {
+      if (clientContext.selectedChannelId[0] === 'C') {
         channelType = web.channels;
-      } else if (clientContext.selectedChannel[0] === 'G') {
+      } else if (clientContext.selectedChannelId[0] === 'G') {
         channelType = web.groups;
-      } else if (clientContext.selectedChannel[0] === 'D') {
+      } else if (clientContext.selectedChannelId[0] === 'D') {
         channelType = web.im;
       }
 
-      channelType.history(clientContext.selectedChannel, {
+      channelType.history(clientContext.selectedChannelId, {
         count: 5
       })
         .then((res) => {
@@ -103,8 +103,8 @@ c64Channel.on('commandReceived', (command, data) => {
       break;
     }
     case rpcMethods.SEND_MESSAGE: {
-      var msgBody = petscii.from(data.toString('ascii'));
-      rtm.sendMessage(msgBody, clientContext.selectedChannel)
+      const msgBody = petscii.from(data.toString('ascii'));
+      rtm.sendMessage(msgBody, clientContext.selectedChannelId)
         .then((sentMessage) => {
           writeSlackMessageToC64(sentMessage);
         });
@@ -132,7 +132,7 @@ rtm.on(RTM_EVENTS.MESSAGE, (message) => {
     rtm.dataStore.getDMById(message.channel).latest = message;
   }
   // if we get a message on the listening channel, send it
-  if (message.channel === clientContext.selectedChannel) {
+  if (message.channel === clientContext.selectedChannelId) {
     writeSlackMessageToC64(message);
   }
 });
