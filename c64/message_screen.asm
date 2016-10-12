@@ -5,11 +5,12 @@ msg_buffer !fill 42, 0
 	!byte COLOR_BLACK
 	!fill 40, $A4
 	!byte COLOR_LIGHT_BLUE
-.text !pet "RETURN to message the channel", 0
+.message_placeholder_text !pet "HIT [RETURN] to message the channel", 0
+.channel_screen_key_label !pet "HIT [C] FOR CHANNELS", 0
 
 .line_count_tmp !byte 0
 message_screen_channel !fill 40, 0
-.new_message_buffer !fill 255, 0
+.new_message_buffer !fill 100, 0
 .message_list_offset !byte 0
 
 .tmp !word 0
@@ -30,7 +31,6 @@ message_screen_init
 	
 
 message_screen_enter
-	; cancel screen update handler
 	sei
 	+set16im .update_handler, screen_update_handler_ptr
 	+set16im .keyboard_handler, keyboard_handler_ptr
@@ -40,14 +40,14 @@ message_screen_enter
 message_screen_render
 	jsr screen_clear
 
-	ldx #TOP_BANNER_ROW
-	ldy #TOP_BANNER_COL
-	+set16im top_banner_text, $fb
-	jsr screen_print_str
-
 	ldx #0
 	ldy #0
 	+set16im message_screen_channel, $fb
+	jsr screen_print_str
+
+	ldx #0
+	ldy #20
+	+set16im .channel_screen_key_label, $fb
 	jsr screen_print_str
 
 	ldx #22
@@ -55,10 +55,7 @@ message_screen_render
 	+set16im .str_line, $fb
 	jsr screen_print_str
 
-	ldx #23
-	ldy #0
-	+set16im .text, $fb
-	jsr screen_print_str
+	jsr message_screen_render_placeholder
 	rts
 
 
@@ -142,17 +139,14 @@ append_message_to_screen
 	jmp irq_return
 
 .read_message_input_from_keyboard
-	ldx #80						; clear the input area
-	lda #$20
-.clear_input_area
-	sta $0400 + (40 * 23), x
-	dex
-	bpl .clear_input_area
+	jsr message_screen_clear_input_area
 
 	clc
 	ldx #23
 	ldy #0
 	jsr PLOT
+	ldy #0
+
 .read_input
 	jsr CHRIN	; read line from keyboard (first call), 
 			; subsequent calls will retrieve each byte of that input
@@ -160,35 +154,41 @@ append_message_to_screen
 	iny
 	cmp #13
 	bne .read_input
-	lda #126		; write a \0 at end of input
+	lda #0		; write a \0 at end of input
 	sta .new_message_buffer, y
 
+.send_message
+	cpy #1					; if there is no text, don't send
+	beq .send_message_done
+	
+	sec 					; get cursor pos. If cursor is behind the start of the input, don't send
+	jsr PLOT
+	cpx #23
+	bcc .send_message_done
 
-	;jsr message_screen_render
-	;jsr .print_message_list
+	lda #RPC_SEND_MESSAGE
+	jsr rs232_write_byte
+	+set16im .new_message_buffer, $fb
+	jsr rs232_send_string
+	lda #COMMAND_TRAILER_CHAR
+	jsr rs232_write_byte
+
+.send_message_done
+	jsr message_screen_render_placeholder
 	rts
 
-; .print_message_list
-; 	lda #3
-; 	sta .line_count_tmp
-; 	lda .message_list_offset
-; 	sec
-; 	sbc #19
-; 	sta .tmp
-; 	tax
-; .msg_render_loop
-; 	lda message_lines_pointers_lo, x
-; 	sta $fb
-; 	lda message_lines_pointers_hi, x
-; 	sta $fc
-; 	jsr message_screen_render_msg
-; 	inc .line_count_tmp
-; 	ldx .line_count_tmp
-; 	ldy #0
-; 	clc
-; 	jsr PLOT
-; 	inc .tmp
-; 	ldx .tmp
-; 	cpx .message_list_offset
-; 	bne .msg_render_loop
-; 	rts
+message_screen_clear_input_area
+	ldx #80						; clear the input area
+	lda #$20
+.clear_input_area
+	sta $0400 + (40 * 23), x
+	dex
+	bpl .clear_input_area
+	rts
+
+message_screen_render_placeholder
+	ldx #23
+	ldy #0
+	+set16im .message_placeholder_text, $fb
+	jsr screen_print_str
+	rts

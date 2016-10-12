@@ -30,7 +30,6 @@ screen_print_str
 	cmp #0
 	beq .print_str_exit
 	jsr CHROUT
-screen_print_str_debugger
 	iny
 	bne .print_str_loop
 	; if we overflowed Y, inc $fc

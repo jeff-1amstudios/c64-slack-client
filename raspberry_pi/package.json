@@ -11,7 +11,18 @@
   "dependencies": {
     "@slack/client": "^3.5.4",
     "bluebird": "^3.3.5",
+    "lodash": "^4.16.4",
     "request-promise": "^3.0.0",
     "serialport": "^4.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^3.7.1",
+    "eslint-config-airbnb-base": "^8.0.0",
+    "eslint-plugin-import": "^1.16.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    }
   }
 }

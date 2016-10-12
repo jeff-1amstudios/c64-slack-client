@@ -29,7 +29,14 @@ string_copy
 	sta ($fd), y
 	cmp #0          ; If char is 0, then exit
 	beq .exit
+	cmp #$ff          ; If char is 0xff, then exit
+	beq .exit
 	iny
+	bne .copy_loop
+	; if we overflowed Y, inc base pointers
+	inc $fc
+	inc $fe
+	ldy #0
 	jmp .copy_loop
 
 ; ----------------------------------------------------------------------

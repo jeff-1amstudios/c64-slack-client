@@ -20,3 +20,6 @@ message_lines_next_insert_index !byte 0
 message_lines_pointers_lo !fill LINES_BUFFER_SIZE
 message_lines_pointers_hi !fill LINES_BUFFER_SIZE
 message_lines_buffer !fill 42 * LINES_BUFFER_SIZE, 0
+
+channels_buffer !fill 1600, 0
+dms_buffer !fill 500, 0

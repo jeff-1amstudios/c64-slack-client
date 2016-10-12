@@ -1,5 +1,5 @@
 !cpu 6510
-!to "./build/ms4.prg",cbm
+!to "./build/slack-client.prg",cbm
 !zone main
 !source "macros.asm"
 
@@ -47,7 +47,15 @@ init
 	jsr keyboard_read
 	jsr rs232_try_read_byte
 	cmp #0
-	beq .main_loop
+	bne .got_byte
+	; tay 				; if we get \0, it could either be empty buffer or a \0 in the data 
+	; lda RSSTAT
+	; and #8 		; bit 3 in RSSTAT is high if recv buffer was empty
+	; cmp #8
+	;beq .main_loop
+	;tya
+	jmp .main_loop
+.got_byte
 
 	sta $0400 + (40 * 23) + 38
 
@@ -56,7 +64,7 @@ init
 	ldy #1          ; if tilde, then set Y = 1
 	sty .end_of_command
 	lda #0          ; replace ~ with \0 so we write the end of the string
-add_byte
+
 .add_byte_to_buffer
 
 	ldy #0
@@ -75,7 +83,7 @@ add_byte
 ;debugger
 	jmp .main_loop
 
-cmd_buffer !fill 1200, 0
+cmd_buffer !fill 2000, 0
 .end_of_command !byte 0
 .debug_output_offset !byte 0
 

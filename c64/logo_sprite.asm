@@ -4,10 +4,8 @@
 .ANIM_DELAY = 3
 .SPRITE_0_PTR = 128
 
-.DISPLAY_X = 130
-.DISPLAY_Y = 100
-.WIDTH = 48
-.HEIGHT = 42
+.DISPLAY_X = 65
+.DISPLAY_Y = 225
 
 .frame_counter !byte .FRAME_COUNT
 .anim_delay !byte .ANIM_DELAY
@@ -19,7 +17,7 @@ logo_sprite_init
 	lda $d015
 	ora #%00000001		; enable sprite 0
 	sta $d015
-	lda #0
+	lda #1
 	sta $d027			; sprite color
 	
 	; sprite #0 (top-left)
@@ -28,12 +26,15 @@ logo_sprite_init
 	lda #.DISPLAY_Y
 	sta $d001		; y
 
+	lda #1			; enable 9th bit of X position (255 + x)
+	sta $d010
+
 	lda $d01d
 	ora #%00000001
-	sta $d01d		; enable sprite 0 x-expand
+	;sta $d01d		; enable sprite 0 x-expand
 	lda $d017
 	ora #%00000001
-	sta $d017		; enable sprite 0 y-expand
+	;sta $d017		; enable sprite 0 y-expand
 	rts
 
 
