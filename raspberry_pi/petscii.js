@@ -5,10 +5,9 @@ function to(input) {
   const sanitizedInput = input
     .replace(/\r/g, '')
     .replace(/\n/g, '\r')
+    .replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~\r]*/g, '')
     .replace(/_/g, '-')
-    .replace(/`/g, '"')
-    .replace(/\x1A/g, '')  /* ctrl-z */
-    .replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~\r]*/g, '');
+    .replace(/`/g, '\x27');  // '`' in petscii
 
   let petsciiString = '';
   for (let i = 0; i < sanitizedInput.length; i++) {

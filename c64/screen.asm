@@ -75,7 +75,7 @@ screen_clear_background
 	rts
 
 ; ----------------------------------------------------------------------
-; A: first row to scroll
+; A: first row to scroll ( (-1) - to scroll line 1, A=0)
 ; Y: number of rows to scroll
 ; ----------------------------------------------------------------------
 screen_scroll_lines_tmp !word 0
@@ -114,5 +114,14 @@ screen_scroll_lines_up
 	+add16im ZP_TMP_4, 40, ZP_TMP_4
 	jmp .screen_scroll_lines_up_loop
 
-.screen_scroll_lines_up_exit
+.screen_scroll_lines_up_exit 			; clear out last line with space chars
+	+add16im ZP_TMP_1, 40, ZP_TMP_1
+	ldy #39
+	lda #$20
+.screen_scroll_lines_up_exit_loop
+	sta (ZP_TMP_1), y
+	dey
+	bpl .screen_scroll_lines_up_exit_loop
+
+
 	rts

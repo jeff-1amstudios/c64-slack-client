@@ -53,11 +53,17 @@ command_handler
 
 .check_dms
 		cmp #RPC_DMS_LIST
-		bne .done
+		bne .check_disconnected
 		+set16im cmd_buffer, $fb
 		+set16im dms_buffer, $fd
 		jsr string_copy
 		jsr channels_screen_on_dm_data
+		rts
+
+.check_disconnected
+		cmp #RPC_SLACK_DISCONNECTED
+		bne .done
+		jsr wait_for_connection_screen_render
 		rts
 
 .done

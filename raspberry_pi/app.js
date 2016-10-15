@@ -46,7 +46,10 @@ function writeSlackMessageToC64(message) {
   if (clientContext.lastMessageUserId !== message.user) {
     const user = rtm.dataStore.getUserById(message.user);
     const msgDate = new Date(parseFloat(message.ts) * 1000);
-    let headerText = util.format('%s %d:%d ', user.profile.real_name.substring(0, 32), msgDate.getHours(), msgDate.getMinutes());
+    let headerText = util.format('%s %d:%d ',
+      user.profile.real_name.substring(0, 32),
+      _.padStart(msgDate.getHours(), 2, '0'),
+      _.padStart(msgDate.getMinutes(), 2, '0'));
     const paddingLength = (40 - headerText.length);
     headerText += _.repeat(String.fromCharCode(0xc0), paddingLength);
     clientContext.lastMessageUserId = message.user;
@@ -64,8 +67,6 @@ function writeSlackMessageToC64(message) {
 }
 
 c64Channel.on('commandReceived', (command, data) => {
-  logger.log('commandReceived', command);
-
   switch (command) {
     case rpcMethods.CHANNEL_LIST: {
       const output = rpcMessageBuilder.getChannelList(rtm.dataStore);
@@ -114,16 +115,26 @@ c64Channel.on('commandReceived', (command, data) => {
     default: {
       logger.log('unknown command:', data);
     }
-
   }
 });
 
+logger.log('** Commodore 64 Slack Client API proxy **');
 logger.log('Waiting for Slack RTM connection...');
 rtm.start();
 
 rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
   logger.log('Slack RTM client connected');
   c64Channel.write(rpcMethods.HELLO, petscii.to(rtmStartData.self.name.substring(0, 20)));
+});
+
+rtm.on(CLIENT_EVENTS.RTM.ATTEMPTING_RECONNECT, () => {
+  logger.log('Slack RTM client reconnecting');
+  c64Channel.write(rpcMethods.SLACK_DISCONNECTED);
+});
+
+rtm.on(CLIENT_EVENTS.RTM.DISCONNECT, () => {
+  logger.log('Slack RTM client disconnected');
+  c64Channel.write(rpcMethods.SLACK_DISCONNECTED);
 });
 
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {

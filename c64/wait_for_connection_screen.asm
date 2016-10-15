@@ -23,7 +23,6 @@ connection_handshake_status !byte 0
 wait_for_connection_screen_render
 	sei
 	+set16im .update_handler, screen_update_handler_ptr
-	;+set16im .keyboard_handler, keyboard_handler_ptr
 	cli
 
 	jsr screen_clear

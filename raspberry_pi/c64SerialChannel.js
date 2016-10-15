@@ -1,8 +1,25 @@
 const SerialPort = require('serialport');
 const EventEmitter = require('events');
+const logger = require('./logger');
+const _ = require('lodash');
 
 const MODE_STDOUT = 0;
 const MODE_SERIAL_PORT = 1;
+const COMMAND_TRAILING_CHAR = 0x7e;  // '~'
+
+function getPrintableBytes(payload) {
+  let output = '';
+  if (_.isString(payload)) {
+    for (let i = 0; i < Math.min(40, payload.length); i++) {
+      output += payload.charCodeAt(i).toString(16) + ' ';
+    }
+    return output;
+  }
+  for (let i = 0; i < Math.min(40, payload.length); i++) {
+    output += payload[i].toString(16) + ' ';
+  }
+  return output;
+}
 
 class C64SerialChannel extends EventEmitter {
 
@@ -25,13 +42,15 @@ class C64SerialChannel extends EventEmitter {
     });
 
     process.stdin.on('end', () => {
+      logger.log('Pi handler exiting');
       process.exit(0);
     });
     process.stdin.on('close', () => {
+      logger.log('Pi handler exiting');
       process.exit(0);
     });
-    process.stdout.on('error', () => {
-      process.stderr.write('stdout error');
+    process.stdout.on('error', (e) => {
+      logger.log('stdout error', e);
     });
   }
 
@@ -48,16 +67,13 @@ class C64SerialChannel extends EventEmitter {
   }
 
   write(commandId, payload) {
-    console.error('writing', commandId, 'payload', payload);
-    if (this.mode === MODE_SERIAL_PORT) {
-      this.port.write(new Buffer([commandId]));
-      this.port.write(payload);
-      this.port.write('~');
-    } else {
-      process.stdout.write(new Buffer([commandId]));
-      process.stdout.write(payload);
-      process.stdout.write('~');
+    logger.log(`[RPi >> C64] command=0x${commandId.toString(16)}, payload=${getPrintableBytes(payload)}`);
+    const outputChannel = this.mode === MODE_SERIAL_PORT ? this.port : process.stdout;
+    outputChannel.write(Buffer.from([commandId]));
+    if (payload) {
+      outputChannel.write(payload);
     }
+    outputChannel.write(Buffer.from([COMMAND_TRAILING_CHAR]));
   }
 
   handleInputFromC64(chunk) {
@@ -71,7 +87,10 @@ class C64SerialChannel extends EventEmitter {
     this.inputBuffer.copy(cmd, 0, 0, this.inputBuffer.length - 1);
     this.inputBuffer = Buffer.alloc(0);
 
-    this.emit('commandReceived', cmd[0], cmd.slice(1));
+    const commandId = cmd[0];
+    const payload = cmd.slice(1);
+    logger.log(`[C64 >> RPi] command=0x${commandId.toString(16)}, payload=${getPrintableBytes(payload)}`);
+    this.emit('commandReceived', commandId, payload);
   }
 }
 

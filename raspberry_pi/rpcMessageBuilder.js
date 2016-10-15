@@ -5,6 +5,8 @@ const MOCK_DATA = require('./_mockData');
 
 const MOCK = false;
 const C64_MAX_PAYLOAD_LENGTH = 1900;
+const MAX_DMS = 15;
+const MAX_CHANNELS = 15;
 
 /*
 *  struct {
@@ -14,8 +16,7 @@ const C64_MAX_PAYLOAD_LENGTH = 1900;
 */
 function getChannelList(dataStore) {
   const pageIndex = 0;
-  const PAGE_SIZE = 250;
-  const buffer = Buffer.alloc((42 * PAGE_SIZE) + 1);
+  const buffer = Buffer.alloc((42 * MAX_CHANNELS) + 1);
   let offset = 0;
 
   let visibleChannels;
@@ -30,7 +31,7 @@ function getChannelList(dataStore) {
 
   const channelsAndGroups = _.concat(visibleChannels, visibleGroups);
   const groups = _.orderBy(channelsAndGroups, ['unread_count_display', 'name'], ['desc', 'asc']);
-  const page = _.slice(groups, pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE);
+  const page = _.slice(groups, pageIndex * MAX_CHANNELS, (pageIndex + 1) * MAX_CHANNELS);
 
   buffer.writeUInt8(Math.max(1, page.length / 19), offset++); // total pages
   buffer.writeUInt8(page.length, offset++);                   // page size
@@ -57,7 +58,7 @@ function getChannelList(dataStore) {
 }
 
 function getDMList(dataStore) {
-  const buffer = Buffer.alloc((42 * 250) + 1);
+  const buffer = Buffer.alloc((42 * MAX_DMS) + 1);
   let offset = 0;
   let sortedDMs;
   if (MOCK) {
@@ -66,7 +67,7 @@ function getDMList(dataStore) {
     sortedDMs = _.chain(dataStore.dms)
       .filter('latest')
       .orderBy(['unread_count_display', 'latest.ts'], ['desc', 'desc'])
-      .take(15)
+      .take(MAX_DMS)
       .value();
   }
 
@@ -109,17 +110,18 @@ function splitInto40CharacterLines(msg) {
     lineRun++;
   }
   if (lineStart !== msg.length - 1) {
-    lines.push(msg.substring(lineStart));
+    let lastLine = _.trim(msg.substring(lineStart));
+    if (lastLine.length > 0) {
+      lines.push(msg.substring(lineStart));
+    }
   }
   return lines;
 }
 
 function getMessageLines(msgBody) {
   const output = [];
-  splitInto40CharacterLines(msgBody).forEach((l) => {
-    output.push(petscii.to(l));
-  });
-  return output;
+  var petsciiMsg = petscii.to(msgBody);
+  return splitInto40CharacterLines(petsciiMsg);
 }
 
 

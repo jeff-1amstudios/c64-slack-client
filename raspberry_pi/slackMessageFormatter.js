@@ -16,6 +16,11 @@ function formatSlackTokens(msg, slackDataStore) {
         return `#${matchGroup.substring(matchGroup.indexOf('|') + 1)}`;
       }
     }
+    else {
+      if (matchGroup.indexOf('|') !== -1) {
+        return matchGroup.substring(matchGroup.indexOf('|') + 1);
+      }
+    }
     return matchGroup;
   });
 

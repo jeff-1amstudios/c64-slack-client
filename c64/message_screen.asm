@@ -2,11 +2,11 @@
 
 msg_buffer !fill 42, 0
 .str_line         
-	!byte COLOR_BLACK
-	!fill 40, $A4
+	!byte COLOR_WHITE
+	!fill 40, $60
 	!byte COLOR_LIGHT_BLUE
 .message_placeholder_text !pet "HIT [RETURN] to message the channel", 0
-.channel_screen_key_label !pet "HIT [C] FOR CHANNELS", 0
+.channel_screen_key_label !pet "CHANNELS + DMs", 0
 
 .line_count_tmp !byte 0
 message_screen_channel !fill 40, 0
@@ -46,9 +46,13 @@ message_screen_render
 	jsr screen_print_str
 
 	ldx #0
-	ldy #20
+	ldy #26
 	+set16im .channel_screen_key_label, $fb
 	jsr screen_print_str
+
+	lda $0400 + 26
+	eor #$80
+	sta $0400 + 26
 
 	ldx #22
 	ldy #0
@@ -93,16 +97,22 @@ append_message_to_screen
 	jsr screen_scroll_lines_up
 
 	ldy #0
+	sty .tmp 			; reset .tmp to 0
 	lda ($fb), y
-	cmp #'3'
+	cmp #RPC_MSG_LINE_HEADER
 	bne .render_text
+	lda #1 
+	sta .tmp 			; .tmp = 1 (should reset color after this line)
 	lda #COLOR_GREEN
 	jsr CHROUT
 .render_text
 	+inc16 $fb  ; jump over 'type' field
-	ldx #20
+	ldx #21
 	ldy #0
 	jsr screen_print_str
+
+	lda .tmp
+	beq .append_message_to_screen_done
 
 	lda #COLOR_LIGHT_BLUE
 	jsr CHROUT
@@ -163,7 +173,7 @@ append_message_to_screen
 	
 	sec 					; get cursor pos. If cursor is behind the start of the input, don't send
 	jsr PLOT
-	cpx #23
+	cpx #22
 	bcc .send_message_done
 
 	lda #RPC_SEND_MESSAGE
