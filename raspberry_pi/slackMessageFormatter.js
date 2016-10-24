@@ -4,7 +4,7 @@ const _ = require('lodash');
 
 const tokenRegex = /<(.*?)>/g;
 
-function formatSlackTokens(msg, slackDataStore) {
+function resolveTokens(msg, slackDataStore) {
   const formattedMsg = msg.replace(tokenRegex, (match, matchGroup) => {
     if (_.startsWith(matchGroup, '@U')) {
       if (matchGroup.indexOf('|') !== -1) {
@@ -15,11 +15,8 @@ function formatSlackTokens(msg, slackDataStore) {
       if (matchGroup.indexOf('|') !== -1) {
         return `#${matchGroup.substring(matchGroup.indexOf('|') + 1)}`;
       }
-    }
-    else {
-      if (matchGroup.indexOf('|') !== -1) {
-        return matchGroup.substring(matchGroup.indexOf('|') + 1);
-      }
+    } else if (matchGroup.indexOf('|') !== -1) {
+      return matchGroup.substring(matchGroup.indexOf('|') + 1);
     }
     return matchGroup;
   });
@@ -28,5 +25,5 @@ function formatSlackTokens(msg, slackDataStore) {
 }
 
 module.exports = {
-  formatSlackTokens
+  resolveTokens
 };

@@ -8,6 +8,10 @@ const MODE_SERIAL_PORT = 1;
 const COMMAND_TRAILING_CHAR = 0x7e;  // '~'
 
 function getPrintableBytes(payload) {
+  if (!payload) {
+    return '';
+  }
+
   let output = '';
   if (_.isString(payload)) {
     for (let i = 0; i < Math.min(40, payload.length); i++) {
@@ -23,11 +27,17 @@ function getPrintableBytes(payload) {
 
 class C64SerialChannel extends EventEmitter {
 
-  constructor() {
+  constructor(serialPortDevice, baudrate) {
     super();
     this.inputBuffer = Buffer.alloc(0);
     this.lastFetched = 0;
     this.fetchingMessage = false;
+
+    if (serialPortDevice) {
+      this.useRealSerialPort(serialPortDevice, baudrate);
+    } else {
+      this.useStandardOut();
+    }
   }
 
   useStandardOut() {
@@ -54,10 +64,10 @@ class C64SerialChannel extends EventEmitter {
     });
   }
 
-  useRealSerialPort(name, baud) {
+  useRealSerialPort(name, baudrate) {
     this.mode = MODE_SERIAL_PORT;
     this.port = new SerialPort(name, {
-      baudrate: baud
+      baudrate
     });
     this.port.on('data', (data) => {
       if (data && data.length > 0) {

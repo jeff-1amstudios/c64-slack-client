@@ -17,6 +17,7 @@ const rpcMessageBuilder = require('./rpcMessageBuilder');
 const rpcMethods = require('./rpcMethods');
 
 const token = process.env.SLACK_API_TOKEN || '';
+const serialPortDevice = process.env.C64_SLACK_SERIALPORT_DEVICE;
 
 const web = new WebClient(token);
 const rtm = new RtmClient(token, {
@@ -34,8 +35,7 @@ const clientContext = {
   lastUserId: null
 };
 
-const c64Channel = new C64SerialChannel();
-c64Channel.useStandardOut();
+const c64Channel = new C64SerialChannel(serialPortDevice, 1200);
 
 // Converts a slack message into a set of lines and sends each one across the C64 channel
 function writeSlackMessageToC64(message) {
@@ -47,7 +47,7 @@ function writeSlackMessageToC64(message) {
     const user = rtm.dataStore.getUserById(message.user);
     const msgDate = new Date(parseFloat(message.ts) * 1000);
     let headerText = util.format('%s %d:%d ',
-      user.profile.real_name.substring(0, 32),
+      user ? user.profile.real_name.substring(0, 32) : '(Unknown user)',
       _.padStart(msgDate.getHours(), 2, '0'),
       _.padStart(msgDate.getMinutes(), 2, '0'));
     const paddingLength = (40 - headerText.length);
@@ -57,7 +57,7 @@ function writeSlackMessageToC64(message) {
     c64Channel.write(rpcMethods.MSG_HEADER_LINE, petscii.to(headerText));
   }
 
-  const msgBody = slackMessageFormatter.formatSlackTokens(
+  const msgBody = slackMessageFormatter.resolveTokens(
     message.text.substring(0, 255),
     rtm.dataStore);
 
@@ -105,10 +105,25 @@ c64Channel.on('commandReceived', (command, data) => {
     }
     case rpcMethods.SEND_MESSAGE: {
       const msgBody = petscii.from(data.toString('ascii'));
-      rtm.sendMessage(msgBody, clientContext.selectedChannelId)
+      if (msgBody.length === 0) {
+        break;
+      }
+      if (_.startsWith(msgBody, '/')) {
+        const msgParts = msgBody.split(' ');
+        web.chat.makeAPICall('chat.command', {
+          channel: clientContext.selectedChannelId,
+          command: msgParts[0],
+          text: msgParts[1]
+        })
         .then((sentMessage) => {
           writeSlackMessageToC64(sentMessage);
         });
+      } else {
+        rtm.sendMessage(msgBody, clientContext.selectedChannelId)
+          .then((sentMessage) => {
+            writeSlackMessageToC64(sentMessage);
+          });
+      }
       break;
     }
 
@@ -123,8 +138,12 @@ logger.log('Waiting for Slack RTM connection...');
 rtm.start();
 
 rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
-  logger.log('Slack RTM client connected');
+  logger.log('Slack RTM client authenticated');
   c64Channel.write(rpcMethods.HELLO, petscii.to(rtmStartData.self.name.substring(0, 20)));
+});
+
+rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, () => {
+  logger.log('Slack RTM client connected');
 });
 
 rtm.on(CLIENT_EVENTS.RTM.ATTEMPTING_RECONNECT, () => {

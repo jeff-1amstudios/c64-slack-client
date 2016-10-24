@@ -98,7 +98,7 @@ function splitInto40CharacterLines(msg) {
   let lineStart = 0;
   let lineRun = 0;
   for (let i = 0; i < msg.length; i++) {
-    if (msg[i] === '\n') {
+    if (msg[i] === '\r') {
       lines.push(msg.substring(lineStart, i));
       lineStart = i + 1;
       lineRun = 0;
@@ -110,7 +110,7 @@ function splitInto40CharacterLines(msg) {
     lineRun++;
   }
   if (lineStart !== msg.length - 1) {
-    let lastLine = _.trim(msg.substring(lineStart));
+    const lastLine = _.trim(msg.substring(lineStart));
     if (lastLine.length > 0) {
       lines.push(msg.substring(lineStart));
     }
@@ -119,8 +119,7 @@ function splitInto40CharacterLines(msg) {
 }
 
 function getMessageLines(msgBody) {
-  const output = [];
-  var petsciiMsg = petscii.to(msgBody);
+  const petsciiMsg = petscii.to(msgBody);
   return splitInto40CharacterLines(petsciiMsg);
 }
 

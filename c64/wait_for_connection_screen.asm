@@ -15,6 +15,11 @@
 .press_key_to_continue_text
 	!pet "PRESS ANY KEY TO CONTINUE", 0
 
+.author_text
+	!byte COLOR_GREEN
+	!pet "BY JEFF HARRIS", 13
+	!pet "HTTP://1AMSTUDIOS.COM / @1AMSTUDIOS", COLOR_WHITE, 0
+
 .text_flash !byte 30
 .color_switch_index !byte 0
 .color_switch_table !byte 1, 30
@@ -42,6 +47,11 @@ wait_for_connection_screen_render
 	+set16im .wait_text, $fb
 	jsr screen_print_str
 
+	ldx #23
+	ldy #0
+	+set16im .author_text, $fb
+	jsr screen_print_str
+
 	jsr logo_sprite_init
 	rts
 
@@ -63,10 +73,10 @@ wait_for_connection_screen_render
 	ldy connection_handshake_status
 	cpy #0
 	bne .do_press_key_line
-	sta $d800 + (40*4), x
+	sta $d800 + (40*4), x  		; toggle waiting for connection line
 	jmp .decx
 .do_press_key_line	
-	sta $d800 + (40*20), x
+	sta $d800 + (40*20), x 		; toggle press key line
 .decx
 	dex
 	bpl .update_color_loop
@@ -122,9 +132,16 @@ connection_screen_on_channels_info
 
 	lda #COLOR_LIGHT_BLUE
 	jsr CHROUT
+
+	lda #1
+	sta flash_screen_on_data
 	rts
 
 connection_screen_on_channel_data
+
+	lda #0
+	sta flash_screen_on_data
+
 	lda #1
 	sta connection_handshake_status
 	clc

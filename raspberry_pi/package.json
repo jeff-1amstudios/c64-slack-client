@@ -1,8 +1,8 @@
 {
-  "name": "serial_port",
+  "name": "raspi_c64_slack_client_proxy",
   "version": "1.0.0",
-  "description": "Handles the connection between the C64 and Mule services",
-  "main": "serial_port_handler.js",
+  "description": "Handles the connection between the C64 and Slack RTM api",
+  "main": "app.js",
   "scripts": {
     "test": "eslint . && mocha tests/"
   },

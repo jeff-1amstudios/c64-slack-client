@@ -25,6 +25,7 @@ CODE_START = $9000
 
 screen_update_handler_ptr !word 0
 keyboard_handler_ptr !word 0
+flash_screen_on_data !byte 0
 .dbg_pos !byte 0
 
 init
@@ -56,17 +57,18 @@ init
 	;tya
 	jmp .main_loop
 .got_byte
+	ldy flash_screen_on_data
+	beq .skip_screen_flash
+	inc $d020
+.skip_screen_flash
 
-	sta $0400 + (40 * 23) + 38
-
-	cmp #126        ; tilde char means 'end of command'
+	cmp #COMMAND_TRAILER_CHAR        ; is this the end-of-cmd marker?
 	bne .add_byte_to_buffer
-	ldy #1          ; if tilde, then set Y = 1
+	ldy #1          ; if end-of-cmd, then set Y = 1
 	sty .end_of_command
-	lda #0          ; replace ~ with \0 so we write the end of the string
+	lda #0          ; replace end-of-cmd with \0
 
 .add_byte_to_buffer
-
 	ldy #0
 	sta (COMMAND_BUFFER_PTR), y
 	+inc16 COMMAND_BUFFER_PTR
@@ -74,8 +76,8 @@ init
 	ldy .end_of_command
 	cpy #1          ; if not 'end of command', go back around
 	bne .main_loop
-	lda #$20
-	sta $0400 + (40 * 23) + 38
+	lda #14			; reset border color
+	sta $d020
 	jsr command_handler
 	+set16im cmd_buffer, COMMAND_BUFFER_PTR
 	ldx #0
