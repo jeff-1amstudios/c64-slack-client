@@ -14,20 +14,6 @@ message_screen_channel !fill 40, 0
 .message_list_offset !byte 0
 
 .tmp !word 0
-
-message_screen_init
-	ldx #0
-	+set16im message_lines_buffer, .tmp
-.loop
-	lda .tmp
-	sta message_lines_pointers_lo, x
-	lda .tmp+1
-	sta message_lines_pointers_hi, x
-	inx
-	+add16im .tmp, 42, .tmp
-	cpx #LINES_BUFFER_SIZE
-	bne .loop
-	rts
 	
 
 message_screen_enter
@@ -64,22 +50,8 @@ message_screen_render
 
 
 message_screen_on_data
-	ldx message_lines_next_insert_index
-	lda message_lines_pointers_lo, x
-	sta $fd
-	lda message_lines_pointers_hi, x
-	sta $fe
-
 	+set16im msg_buffer, $fb
 	jsr string_copy
-
-	; increment message_lines_next_insert_index, wrapping at LINES_BUFFER_SIZE
-	inc message_lines_next_insert_index
-	lda message_lines_next_insert_index
-	and #LINES_BUFFER_SIZE
-	sta message_lines_next_insert_index
-	sta .message_list_offset
-
 	+set16im msg_buffer, $fb
 	jsr append_message_to_screen
 	rts

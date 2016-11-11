@@ -41,6 +41,7 @@ class C64SerialChannel extends EventEmitter {
   }
 
   useStandardOut() {
+    logger.log('Using Vice64 serial port emulation');
     this.mode = MODE_STDOUT;
 
     process.stdout.write('\x00');
@@ -65,6 +66,7 @@ class C64SerialChannel extends EventEmitter {
   }
 
   useRealSerialPort(name, baudrate) {
+    logger.log('Using real serial port');
     this.mode = MODE_SERIAL_PORT;
     this.port = new SerialPort(name, {
       baudrate
@@ -73,6 +75,12 @@ class C64SerialChannel extends EventEmitter {
       if (data && data.length > 0) {
         this.handleInputFromC64(data);
       }
+    });
+    this.port.on('open', () => {
+      // for some reason the first byte is often corrupted, so send a dummy
+      // rpc message before sending useful data
+      var msg = [0, COMMAND_TRAILING_CHAR];
+      this.port.write(Buffer.from(msg));
     });
   }
 

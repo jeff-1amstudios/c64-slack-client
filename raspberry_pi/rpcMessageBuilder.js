@@ -4,9 +4,9 @@ const petscii = require('./petscii');
 const MOCK_DATA = require('./_mockData');
 
 const MOCK = false;
-const C64_MAX_PAYLOAD_LENGTH = 1900;
+const C64_MAX_PAYLOAD_LENGTH = 2390;
 const MAX_DMS = 15;
-const MAX_CHANNELS = 15;
+const MAX_CHANNELS = 60;
 
 /*
 *  struct {

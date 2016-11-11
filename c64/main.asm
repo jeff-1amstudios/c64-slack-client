@@ -38,9 +38,8 @@ init
 	jsr screen_enable_lowercase_chars
 
 	jsr rs232_open
-	jsr message_screen_init
-	jsr wait_for_connection_screen_render
 	jsr irq_init
+	jsr wait_for_connection_screen_render
 
 	+set16im cmd_buffer, COMMAND_BUFFER_PTR
 

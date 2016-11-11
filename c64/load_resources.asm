@@ -3,16 +3,10 @@
 
 * = .address_data
 
+; sprite0 - logo
 !bin "resources/slack-logo.spr"
 
-; sprite0 - logo
 
-LINES_BUFFER_SIZE = 255
-message_lines_render_start_index !byte 0
-message_lines_next_insert_index !byte 0
-message_lines_pointers_lo !fill LINES_BUFFER_SIZE
-message_lines_pointers_hi !fill LINES_BUFFER_SIZE
-message_lines_buffer !fill 42 * LINES_BUFFER_SIZE, 0
-
-channels_buffer !fill 1600, 0
+cmd_buffer !fill 2400, 0
+channels_buffer !fill 2400, 0
 dms_buffer !fill 1000, 0

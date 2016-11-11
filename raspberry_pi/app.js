@@ -137,6 +137,9 @@ logger.log('** Commodore 64 Slack Client API proxy **');
 logger.log('Waiting for Slack RTM connection...');
 rtm.start();
 
+
+// ---- SLACK EVENT HANDLERS ----
+
 rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
   logger.log('Slack RTM client authenticated');
   c64Channel.write(rpcMethods.HELLO, petscii.to(rtmStartData.self.name.substring(0, 20)));
