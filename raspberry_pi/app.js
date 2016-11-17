@@ -43,13 +43,21 @@ function writeSlackMessageToC64(message) {
     return;
   }
 
-  if (clientContext.lastMessageUserId !== message.user) {
-    const user = rtm.dataStore.getUserById(message.user);
+  const userId = message.user || message.bot_id;
+  let userString = '';
+  if (clientContext.lastMessageUserId !== userId) {
+    let user = rtm.dataStore.getUserById(userId);
+    if (user) {
+      userString = user.profile.real_name.substring(0, 32);
+    } else {
+      user = rtm.dataStore.getBotById(userId);
+      userString = user.name + ' [bot]';
+    }
     const msgDate = new Date(parseFloat(message.ts) * 1000);
     let headerText = util.format('%s %d:%d ',
-      user ? user.profile.real_name.substring(0, 32) : '(Unknown user)',
-      _.padStart(msgDate.getHours(), 2, '0'),
-      _.padStart(msgDate.getMinutes(), 2, '0'));
+      userString,
+      _.padStart(String(msgDate.getHours()), 2, '0'),
+      _.padStart(String(msgDate.getMinutes()), 2, '0'));
     const paddingLength = (40 - headerText.length);
     headerText += _.repeat(String.fromCharCode(0xc0), paddingLength);
     clientContext.lastMessageUserId = message.user;
@@ -57,14 +65,24 @@ function writeSlackMessageToC64(message) {
     c64Channel.write(rpcMethods.MSG_HEADER_LINE, petscii.to(headerText));
   }
 
-  const msgBody = slackMessageFormatter.resolveTokens(
-    message.text.substring(0, 255),
-    rtm.dataStore);
+  if (message.text && message.text.length > 0) {
+    const msgBody = slackMessageFormatter.resolveTokens(
+      message.text.substring(0, 255),
+      rtm.dataStore);
 
-  _.each(rpcMessageBuilder.getMessageLines(msgBody), (payload) => {
-    c64Channel.write(rpcMethods.MSG_LINE, payload);
-  });
+    _.each(rpcMessageBuilder.getMessageLines(msgBody), (payload) => {
+      c64Channel.write(rpcMethods.MSG_LINE, payload);
+    });
+  }
+  if (message.attachments) {
+    _.each(message.attachments, (a) => {
+      const msgBody = slackMessageFormatter.resolveTokens(a.fallback, rtm.dataStore);
+      c64Channel.write(rpcMethods.MSG_LINE, '- ' + petscii.to(msgBody));
+    });
+  }
+
 }
+
 
 c64Channel.on('commandReceived', (command, data) => {
   switch (command) {
