@@ -63,6 +63,7 @@ Run the API proxy:
 ```
 cd raspberry_pi
 npm install
+npm test
 node app.js
 ```
 On startup, it will authenticate with Slack RTM api, then send a `HELLO` RPC message to the C64, which we expect to already be running.
