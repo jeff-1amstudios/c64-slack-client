@@ -1,6 +1,7 @@
 # Slack client for Commodore 64
 
-_A Slack client for the Commodore 64!_
+<img src="_assets/readme-img.jpg" />
+_Where a Raspberry Pi and a Commodore64 collaborate with Slack._
 
 ## Commodore 64 program
 The c64 program code is written in [6502 assembly](https://en.wikipedia.org/wiki/MOS_Technology_6502) and somewhat(?!) well documented. 
