@@ -27,6 +27,8 @@ screen_update_handler_ptr !word 0
 keyboard_handler_ptr !word 0
 flash_screen_on_data !byte 0
 .dbg_pos !byte 0
+.end_of_command !byte 0
+.debug_output_offset !byte 0
 
 init
 	; disable BASIC rom
@@ -83,17 +85,6 @@ init
 	stx .end_of_command
 ;debugger
 	jmp .main_loop
-
-cmd_buffer !fill 2000, 0
-.end_of_command !byte 0
-.debug_output_offset !byte 0
-
-.print_output
-	clc
-	ldx #24
-	ldy #38
-	jsr PLOT
-	jsr CHROUT
 
 
 !source "defs.asm"
