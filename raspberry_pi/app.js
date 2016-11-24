@@ -51,7 +51,7 @@ function writeSlackMessageToC64(message) {
       userString = user.profile.real_name.substring(0, 32);
     } else {
       user = rtm.dataStore.getBotById(userId);
-      userString = user.name + ' [bot]';
+      userString = `${user.name} [bot]`;
     }
     const msgDate = new Date(parseFloat(message.ts) * 1000);
     let headerText = util.format('%s %d:%d ',
@@ -77,12 +77,10 @@ function writeSlackMessageToC64(message) {
   if (message.attachments) {
     _.each(message.attachments, (a) => {
       const msgBody = slackMessageFormatter.resolveTokens(a.fallback, rtm.dataStore);
-      c64Channel.write(rpcMethods.MSG_LINE, '- ' + petscii.to(msgBody));
+      c64Channel.write(rpcMethods.MSG_LINE, `- ${petscii.to(msgBody)}`);
     });
   }
-
 }
-
 
 c64Channel.on('commandReceived', (command, data) => {
   switch (command) {

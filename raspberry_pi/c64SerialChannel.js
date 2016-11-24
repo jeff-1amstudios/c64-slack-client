@@ -15,12 +15,12 @@ function getPrintableBytes(payload) {
   let output = '';
   if (_.isString(payload)) {
     for (let i = 0; i < Math.min(40, payload.length); i++) {
-      output += payload.charCodeAt(i).toString(16) + ' ';
+      output += payload.charCodeAt(i).toString(16) + ' ';  // eslint-disable-line prefer-template
     }
     return output;
   }
   for (let i = 0; i < Math.min(40, payload.length); i++) {
-    output += payload[i].toString(16) + ' ';
+    output += payload[i].toString(16) + ' ';  // eslint-disable-line prefer-template
   }
   return output;
 }
@@ -79,7 +79,7 @@ class C64SerialChannel extends EventEmitter {
     this.port.on('open', () => {
       // for some reason the first byte is often corrupted, so send a dummy
       // rpc message before sending useful data
-      var msg = [0, COMMAND_TRAILING_CHAR];
+      const msg = [0, COMMAND_TRAILING_CHAR];
       this.port.write(Buffer.from(msg));
     });
   }
