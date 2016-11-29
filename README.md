@@ -38,7 +38,8 @@ RS232 > Device4 >
 Hit 'Save current settings', then Quit.
 
 ```
-/path/to/x64 build/x64 c64/build/slack-client.prg
+cd c64
+/path/to/x64 build/slack-client.prg
 ```
 
 ## Raspberry Pi Slack API proxy
