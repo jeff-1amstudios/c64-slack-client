@@ -5,6 +5,7 @@ function to(input) {
   const sanitizedInput = input
     .replace(/\r/g, '')
     .replace(/\n/g, '\r')
+    // eslint-disable-next-line no-useless-escape
     .replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~\r]*/g, '')
     .replace(/_/g, '-')
     .replace(/`/g, '\x27');  // '`' in petscii
