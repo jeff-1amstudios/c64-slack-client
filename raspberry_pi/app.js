@@ -120,7 +120,7 @@ c64Channel.on('commandReceived', (command, data) => {
       break;
     }
     case rpcMethods.SEND_MESSAGE: {
-      const msgBody = petscii.from(data.toString('ascii'));
+      const msgBody = petscii.from(data.toString('latin1'));
       if (msgBody.length === 0) {
         break;
       }

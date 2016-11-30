@@ -5,7 +5,7 @@ function to(input) {
   const sanitizedInput = input
     .replace(/\r/g, '')
     .replace(/\n/g, '\r')
-    .replace(/[^A-Za-z 0-9 .,?""!@#$%^&*()-_=+;:<>/\\|}{[\]`~\r]*/g, '')
+    .replace(/[^A-Za-z\xc1-\xda 0-9.,?'"!@#$%^&*()-_=+;:<>/\\|}{[\]`~\r]*/g, '')
     .replace(/_/g, '-')
     .replace(/`/g, '\x27');  // '`' in petscii
 
@@ -16,6 +16,8 @@ function to(input) {
       petsciiString += String.fromCharCode(ascii + 32);
     } else if (ascii >= 97 && ascii <= 122) {
       petsciiString += String.fromCharCode(ascii - 32);
+    } else if (ascii >= 193 && ascii <= 218) {
+      petsciiString += String.fromCharCode(ascii - 128);
     } else {
       petsciiString += sanitizedInput[i];
     }
