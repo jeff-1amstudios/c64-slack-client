@@ -54,7 +54,7 @@ function writeSlackMessageToC64(message) {
       userString = `${user.name} [bot]`;
     }
     const msgDate = new Date(parseFloat(message.ts) * 1000);
-    let headerText = util.format('%s %d:%d ',
+    let headerText = util.format('%s %s:%s ',
       userString,
       _.padStart(String(msgDate.getHours()), 2, '0'),
       _.padStart(String(msgDate.getMinutes()), 2, '0'));
