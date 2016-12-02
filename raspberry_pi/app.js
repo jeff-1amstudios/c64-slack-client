@@ -54,7 +54,7 @@ function writeSlackMessageToC64(message) {
       userString = `${user.name} [bot]`;
     }
     const msgDate = new Date(parseFloat(message.ts) * 1000);
-    let headerText = util.format('%s %d:%d ',
+    let headerText = util.format('%s %s:%s ',
       userString,
       _.padStart(String(msgDate.getHours()), 2, '0'),
       _.padStart(String(msgDate.getMinutes()), 2, '0'));
@@ -120,7 +120,7 @@ c64Channel.on('commandReceived', (command, data) => {
       break;
     }
     case rpcMethods.SEND_MESSAGE: {
-      const msgBody = petscii.from(data.toString('ascii'));
+      const msgBody = petscii.from(data.toString('latin1'));
       if (msgBody.length === 0) {
         break;
       }
